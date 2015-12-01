@@ -47,13 +47,6 @@ int main(int argc, char *argv[])
 
 	/*Genero lista de comandos a partir del argumento principal	*/
 
-	argls[0] = strtok(argv[1], " ");
-	while (argls[i] != NULL)
-	{
-	    i++;
-	    argls[i] = strtok (NULL, " \n");
-	}
-
 	/*	Socket Set-up	*/
 	sockfd = socket(PF_INET,SOCK_STREAM,0);
 		if(sockfd == -1)
@@ -66,7 +59,7 @@ int main(int argc, char *argv[])
 	server_info.sin_family		=	AF_INET;
 	server_info.sin_port		=	htons(port);
 
-	printf(">Intentando conectar con servidor...\n");
+	printf("Intentando conectar con servidor... ");
 
 	ctrl = connect (sockfd, (struct sockaddr *)&server_info, sizeof (struct sockaddr_in));
 	if(ctrl == -1)
@@ -76,12 +69,27 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 
-	printf("Conexión exitosa.\n");
+	printf("Conexión establecida.\nPasando comandos y argumentos... ");
+
+	write(sockfd,argv[1],strlen(argv[1])+1);
 
 	read(sockfd,test,6);
-	printf("%s\n",test);
+	if(strcmp(test,"Listo") == 0)
+	{
+		printf("Éxito\n");
+	}
+	else
+	{
+		printf("ERROR.\n");
+		close(sockfd);
+		return -1;
+	}
 
-	close(sockfd);
+	/*	Comienzo de ejecución remota	*/
+
+
+
 	/*	Fin de Programa	*/
+	close(sockfd);
 	return 0;
 }
