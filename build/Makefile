@@ -9,7 +9,7 @@ OBJETOS = main.o
 all : Cliente_Con1
 
 Cliente_Con1 : $(OBJETOS)
-	$(CC) $(CFLAGS) $(OBJETOS) -o $@ -lm
+	$(CC) $(CFLAGS) $(OBJETOS) -o $@
 	@echo 'Creación exitosa'
 
 
