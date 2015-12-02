@@ -14,6 +14,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -29,11 +30,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in server_info;
 
 	/*	Variables de control	*/
-	int 	i		=	0;
 	int		ctrl = 0;
-
-	/*	Variables de datos	*/
-	char   *argls[MAX_CMD]= {NULL};
 	char test[6];
 
 	/*	Comienzo del programa	*/
@@ -48,6 +45,7 @@ int main(int argc, char *argv[])
 	/*Genero lista de comandos a partir del argumento principal	*/
 
 	/*	Socket Set-up	*/
+
 	sockfd = socket(PF_INET,SOCK_STREAM,0);
 		if(sockfd == -1)
 		{
@@ -58,6 +56,14 @@ int main(int argc, char *argv[])
 	inet_pton(AF_INET, ip, &(server_info.sin_addr));
 	server_info.sin_family		=	AF_INET;
 	server_info.sin_port		=	htons(port);
+
+	/*	Configuración para el select	*/
+	fd_set readfds;
+	struct timeval tv;
+	tv.tv_sec	=	0;
+	tv.tv_usec	= 	500000;
+	FD_ZERO(&readfds);
+	FD_SET(sockfd, &readfds);
 
 	printf("Intentando conectar con servidor... ");
 
@@ -73,10 +79,15 @@ int main(int argc, char *argv[])
 
 	write(sockfd,argv[1],strlen(argv[1])+1);
 
+	for(ctrl = 0; ctrl < sizeof(test);ctrl++)
+	{
+		test[ctrl] = '\0';
+	}
+
 	read(sockfd,test,6);
 	if(strcmp(test,"Listo") == 0)
 	{
-		printf("Éxito\n");
+		printf("Éxito\n----------------------------------------\n\n");
 	}
 	else
 	{
@@ -87,7 +98,48 @@ int main(int argc, char *argv[])
 
 	/*	Comienzo de ejecución remota	*/
 
+	char buff[1000];
 
+	while(1)
+	{
+		select(sockfd+1,&readfds,NULL,NULL,&tv);
+
+		if (FD_ISSET(sockfd, &readfds))
+		{	/*	Se pueden recibir datos	*/
+			ctrl = read(sockfd,buff,sizeof buff);
+
+			if(ctrl == 0)
+				{
+				printf("\n----------------------------------------\n\n");
+				close(sockfd);
+				break;
+				}
+			else
+			{
+				printf("%s",buff);
+			}
+		}
+		else
+		{	/*	No se envió nada, el comando espera input	*/
+			fgets(buff, sizeof(buff), stdin);
+			send(sockfd,buff,strlen(buff),0);
+		}
+	for(ctrl=0;ctrl<sizeof buff;ctrl++)
+	{
+		buff[ctrl] = '\0';
+	}
+
+	}
+
+	return 0;
+
+	while( strncmp(buff,"CMD_DONE",8) != 0 )
+	{
+		fgets(buff, sizeof(buff), stdin);
+		send(sockfd,buff,strlen(buff),0);
+
+	}
+	printf("----------------------------------------\n\n");
 
 	/*	Fin de Programa	*/
 	close(sockfd);
