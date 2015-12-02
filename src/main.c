@@ -108,15 +108,15 @@ int main(int argc, char *argv[])
 		{	/*	Se pueden recibir datos	*/
 			ctrl = read(sockfd,buff,sizeof buff);
 
-			if(ctrl == 0)
-				{
+			if(ctrl == 0)	/*	se cerró la conexión	*/
+			{
 				printf("\n----------------------------------------\n\n");
 				close(sockfd);
 				break;
-				}
+			}
 			else
 			{
-				printf("%s",buff);
+				printf("%.*s",ctrl,buff);
 			}
 		}
 		else
@@ -124,10 +124,11 @@ int main(int argc, char *argv[])
 			fgets(buff, sizeof(buff), stdin);
 			send(sockfd,buff,strlen(buff),0);
 		}
-	for(ctrl=0;ctrl<sizeof buff;ctrl++)
-	{
-		buff[ctrl] = '\0';
-	}
+
+		for(ctrl=0;ctrl<sizeof buff;ctrl++)
+		{
+			buff[ctrl] = '\0';
+		}
 
 	}
 
