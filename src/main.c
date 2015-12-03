@@ -57,14 +57,6 @@ int main(int argc, char *argv[])
 	server_info.sin_family		=	AF_INET;
 	server_info.sin_port		=	htons(port);
 
-	/*	Configuración para el select	*/
-	fd_set readfds;
-	struct timeval tv;
-	tv.tv_sec	=	0;
-	tv.tv_usec	= 	500000;
-	FD_ZERO(&readfds);
-	FD_SET(sockfd, &readfds);
-
 	printf("Intentando conectar con servidor... ");
 
 	ctrl = connect (sockfd, (struct sockaddr *)&server_info, sizeof (struct sockaddr_in));
@@ -100,8 +92,18 @@ int main(int argc, char *argv[])
 
 	char buff[1000];
 
+	/*	Configuración para el select	*/
+	fd_set readfds;
+	struct timeval tv;
+	tv.tv_sec	=	1;
+	tv.tv_usec	= 	500000;
+
 	while(1)
 	{
+		FD_ZERO(&readfds);
+		FD_SET(sockfd, &readfds);
+		FD_SET(STDIN_FILENO,&readfds);
+
 		select(sockfd+1,&readfds,NULL,NULL,&tv);
 
 		if (FD_ISSET(sockfd, &readfds))
@@ -118,11 +120,12 @@ int main(int argc, char *argv[])
 			{
 				printf("%.*s",ctrl,buff);
 			}
+			FD_SET(sockfd, &readfds);
 		}
-		else
-		{	/*	No se envió nada, el comando espera input	*/
-			fgets(buff, sizeof(buff), stdin);
-			send(sockfd,buff,strlen(buff),0);
+		if (FD_ISSET(STDIN_FILENO, &readfds))
+		{	/*	input ready	*/
+			ctrl = read(STDIN_FILENO,buff, sizeof buff);
+			send(sockfd,buff,ctrl,0);
 		}
 
 		for(ctrl=0;ctrl<sizeof buff;ctrl++)
@@ -131,16 +134,6 @@ int main(int argc, char *argv[])
 		}
 
 	}
-
-	return 0;
-
-	while( strncmp(buff,"CMD_DONE",8) != 0 )
-	{
-		fgets(buff, sizeof(buff), stdin);
-		send(sockfd,buff,strlen(buff),0);
-
-	}
-	printf("----------------------------------------\n\n");
 
 	/*	Fin de Programa	*/
 	close(sockfd);
