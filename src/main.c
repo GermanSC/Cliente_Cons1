@@ -9,6 +9,7 @@
  ============================================================================
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,19 +20,18 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#define MAX_CMD	20
-
 int main(int argc, char *argv[])
 {
 	/*	Variables de conexión	*/
-	char	ip[]	=	"127.0.0.1";
+	char	ip[INET_ADDRSTRLEN]	=	"127.0.0.1";
 	int		port	=	15001;
 	int		sockfd	=	-1;
 	struct sockaddr_in server_info;
 
 	/*	Variables de control	*/
 	int		ctrl = 0;
-	char test[6];
+	char	test[6];
+	char buff[1000];
 
 	/*	Comienzo del programa	*/
 
@@ -42,16 +42,18 @@ int main(int argc, char *argv[])
 	}
 	printf("Envando comando: \"%s\" a servidor remoto %s:%d\n",argv[1],ip,port);
 
-	/*Genero lista de comandos a partir del argumento principal	*/
+	/* Set de descriptores para lectura	*/
+
+	fd_set readfds;
 
 	/*	Socket Set-up	*/
 
 	sockfd = socket(PF_INET,SOCK_STREAM,0);
-		if(sockfd == -1)
-		{
-			printf(">>ERROR: No se pudo abrir el socket.\n\n");
-			return -1;
-		}
+	if(sockfd == -1)
+	{
+		printf(">>ERROR: No se pudo abrir el socket.\n\n");
+		return -1;
+	}
 
 	inet_pton(AF_INET, ip, &(server_info.sin_addr));
 	server_info.sin_family		=	AF_INET;
@@ -61,28 +63,25 @@ int main(int argc, char *argv[])
 
 	ctrl = connect (sockfd, (struct sockaddr *)&server_info, sizeof (struct sockaddr_in));
 	if(ctrl == -1)
-		{
-			printf(">>ERROR: No se pudo establecer la conexión.\n\n");
-			close(sockfd);
-			return -1;
-		}
+	{
+		printf(">>ERROR: No se pudo establecer la conexión.\n\n");
+		close(sockfd);
+		return -1;
+	}
 
 	printf("Conexión establecida.\nPasando comandos y argumentos... ");
 
 	write(sockfd,argv[1],strlen(argv[1])+1);
 
-	for(ctrl = 0; ctrl < sizeof(test);ctrl++)
-	{
-		test[ctrl] = '\0';
-	}
-
 	read(sockfd,test,6);
-	if(strcmp(test,"Listo") == 0)
+
+	if(strncmp(test,"Listo",6) == 0)
 	{
+
 		printf("Éxito\n----------------------------------------\n\n");
-	}
-	else
-	{
+
+	}else{
+
 		printf("ERROR.\n");
 		close(sockfd);
 		return -1;
@@ -90,49 +89,49 @@ int main(int argc, char *argv[])
 
 	/*	Comienzo de ejecución remota	*/
 
-	char buff[1000];
-
-	/*	Configuración para el select	*/
-	fd_set readfds;
-	struct timeval tv;
-	tv.tv_sec	=	1;
-	tv.tv_usec	= 	500000;
-
 	while(1)
 	{
 		FD_ZERO(&readfds);
 		FD_SET(sockfd, &readfds);
 		FD_SET(STDIN_FILENO,&readfds);
 
-		select(sockfd+1,&readfds,NULL,NULL,&tv);
+		do{
 
-		if (FD_ISSET(sockfd, &readfds))
-		{	/*	Se pueden recibir datos	*/
-			ctrl = read(sockfd,buff,sizeof buff);
+			ctrl = select(sockfd+1,&readfds,NULL,NULL,NULL);
+
+		}while( ctrl == -1 && errno == EINTR );
+		if( ctrl == -1 )
+		{
+			printf("Error de Select.\n\n");
+			close(sockfd);
+			return -1;
+		}
+
+		if ( FD_ISSET(sockfd, &readfds) != 0 )
+		{
+			/*	Hay datos en el socket	*/
+
+			ctrl = read(sockfd,buff,sizeof(buff));
 
 			if(ctrl == 0)	/*	se cerró la conexión	*/
 			{
 				printf("\n----------------------------------------\n\n");
-				close(sockfd);
 				break;
-			}
-			else
-			{
+
+			} else {
+
 				printf("%.*s",ctrl,buff);
+
 			}
-			FD_SET(sockfd, &readfds);
 		}
-		if (FD_ISSET(STDIN_FILENO, &readfds))
-		{	/*	input ready	*/
+
+		if ( FD_ISSET(STDIN_FILENO, &readfds) != 0 )
+		{
+			/*	input de STDIN	*/
+
 			ctrl = read(STDIN_FILENO,buff, sizeof buff);
 			send(sockfd,buff,ctrl,0);
 		}
-
-		for(ctrl=0;ctrl<sizeof buff;ctrl++)
-		{
-			buff[ctrl] = '\0';
-		}
-
 	}
 
 	/*	Fin de Programa	*/
