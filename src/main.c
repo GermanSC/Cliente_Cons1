@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 	/*	Variables de control	*/
 	int		ctrl = 0;
 	char	test[6];
-	char buff[1000];
+	char	buff[1000];
 
 	/*	Comienzo del programa	*/
 
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 		printf("uso: cliente \"comando [opciones] [argumentos]\" \n Comillas necesarias.\n");
 		return -1;
 	}
-	printf("Envando comando: \"%s\" a servidor remoto %s:%d\n",argv[1],ip,port);
+	printf("Envando comando: \"%s\" a servidor remoto %s:%d\n", argv[1], ip, port);
 
 	/* Set de descriptores para lectura	*/
 
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 
 	/*	Socket Set-up	*/
 
-	sockfd = socket(PF_INET,SOCK_STREAM,0);
+	sockfd = socket(PF_INET, SOCK_STREAM, 0);
 	if(sockfd == -1)
 	{
 		printf(">>ERROR: No se pudo abrir el socket.\n\n");
@@ -71,11 +71,11 @@ int main(int argc, char *argv[])
 
 	printf("Conexión establecida.\nPasando comandos y argumentos... ");
 
-	write(sockfd,argv[1],strlen(argv[1])+1);
+	write(sockfd, argv[1], (strlen(argv[1])+1));
 
-	read(sockfd,test,6);
+	read(sockfd, test, 6);
 
-	if(strncmp(test,"Listo",6) == 0)
+	if(strncmp(test, "Listo", 6) == 0)
 	{
 
 		printf("Éxito\n----------------------------------------\n\n");
@@ -93,11 +93,11 @@ int main(int argc, char *argv[])
 	{
 		FD_ZERO(&readfds);
 		FD_SET(sockfd, &readfds);
-		FD_SET(STDIN_FILENO,&readfds);
+		FD_SET(STDIN_FILENO, &readfds);
 
 		do{
 
-			ctrl = select(sockfd+1,&readfds,NULL,NULL,NULL);
+			ctrl = select(sockfd+1, &readfds, NULL, NULL, NULL);
 
 		}while( ctrl == -1 && errno == EINTR );
 		if( ctrl == -1 )
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 		{
 			/*	Hay datos en el socket	*/
 
-			ctrl = read(sockfd,buff,sizeof(buff));
+			ctrl = read(sockfd, buff, sizeof(buff));
 
 			if(ctrl == 0)	/*	se cerró la conexión	*/
 			{
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
 
 			} else {
 
-				printf("%.*s",ctrl,buff);
+				printf("%.*s", ctrl, buff);
 
 			}
 		}
@@ -129,8 +129,8 @@ int main(int argc, char *argv[])
 		{
 			/*	input de STDIN	*/
 
-			ctrl = read(STDIN_FILENO,buff, sizeof buff);
-			send(sockfd,buff,ctrl,0);
+			ctrl = read(STDIN_FILENO, buff, sizeof buff);
+			send(sockfd, buff, ctrl, 0);
 		}
 	}
 
